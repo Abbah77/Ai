@@ -66,7 +66,7 @@ class _AIChatScreenState extends State<AIChatScreen>
 
     // Add welcome message
     _messages.add(Message(
-      text: "Hello! I'm your AI assistant powered by llama.cpp. How can I help you today?",
+      text: "Hello! I'm your AI assistant powered by Abbah. How can I help you today?",
       isUser: false,
       timestamp: DateTime.now(),
     ));
