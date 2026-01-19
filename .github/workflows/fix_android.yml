@@ -1,0 +1,27 @@
+name: Fix Android Project
+on: [workflow_dispatch] # This lets you start it manually
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Reconstruct Android Folder
+        run: |
+          # This deletes the broken manual folder and creates a perfect one
+          rm -rf android
+          flutter create . --platforms=android --org com.example
+          
+      - name: Commit Changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add android/
+          git commit -m "Repair Android folder structure"
+          git push
