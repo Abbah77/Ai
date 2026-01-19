@@ -1,31 +1,11 @@
-plugins {
-    id "com.android.application"
-    id "kotlin-android"
-    id "dev.flutter.flutter-gradle-plugin"
-}
-
 android {
-    namespace "com.example.aiapp"
-    compileSdkVersion 34 // Fixes your "compileSdkVersion is not specified" error
-
-    defaultConfig {
-        applicationId "com.example.aiapp"
-        minSdkVersion 21
-        targetSdkVersion 34
-        versionCode 1
-        versionName "1.0"
-    }
-
+    ...
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
-
+    // Even if you use Java, Flutter needs this for its own Kotlin parts
     kotlinOptions {
-        jvmTarget = '1.8'
+[span_0](start_span)        jvmTarget = '17'[span_0](end_span)
     }
-}
-
-flutter {
-    source '../..'
 }
