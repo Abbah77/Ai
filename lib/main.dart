@@ -49,7 +49,7 @@ class _AIChatScreenState extends State<AIChatScreen>
   final ScrollController _scrollController = ScrollController();
   late AnimationController _backgroundAnimationController;
   bool _isLoading = false;
-  final String _apiUrl = 'http://localhost:8080/chat';
+  final String _apiUrl = 'http://10.74.129.220:8080/chat';
 
   @override
   void initState() {
