@@ -2,24 +2,25 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class ChatMessage {
   final String role; // 'user' or 'assistant'
   final String content;
+
   ChatMessage({required this.role, required this.content});
 
   Map<String, String> toMap() => {'role': role, 'content': content};
+
   factory ChatMessage.fromMap(Map<String, dynamic> map) =>
       ChatMessage(role: map['role'], content: map['content']);
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -62,7 +63,7 @@ class _MyAppState extends State<MyApp> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent + 100,
-          duration: const Duration(milliseconds: 200),
+          duration: Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
       }
@@ -73,6 +74,7 @@ class _MyAppState extends State<MyApp> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
+    // Add user message
     setState(() {
       messages.add(ChatMessage(role: 'user', content: text));
       _controller.clear();
@@ -80,12 +82,15 @@ class _MyAppState extends State<MyApp> {
     _scrollToBottom();
     _saveChatHistory();
 
-    // Send message to iframe via JS
-    _webViewController.runJavaScript(
-      "window.postMessage(${jsonEncode({'role': 'user', 'content': text})}, '*');",
-    );
+    // Send to headless webview engine
+    _webViewController.runJavascript('''
+      var input = document.querySelector('textarea');
+      if(input){ input.value = "$text"; }
+      var btn = document.querySelector('button[type="submit"]');
+      if(btn){ btn.click(); }
+    ''');
 
-    // Add placeholder assistant message
+    // Placeholder assistant message
     setState(() {
       messages.add(ChatMessage(role: 'assistant', content: '...'));
     });
@@ -116,75 +121,70 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AI Chat',
-      debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
       home: Scaffold(
         body: Row(
           children: [
             // Sidebar
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+            Container(
               width: sidebarOpen ? 250 : 0,
-              color: const Color(0xFF24242A),
+              color: Color(0xFF24242A),
               child: Column(
                 children: [
-                  const SizedBox(height: 60),
+                  SizedBox(height: 60),
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.all(8),
+                      padding: EdgeInsets.all(8),
                       children: [
                         ElevatedButton.icon(
                           onPressed: _newChat,
-                          icon: const Icon(Icons.add),
-                          label: const Text('New Chat'),
+                          icon: Icon(Icons.add),
+                          label: Text('New Chat'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFA78BFA),
+                            backgroundColor: Color(0xFFA78BFA),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20),
                         ...messages
                             .asMap()
                             .entries
                             .where((e) => e.value.role == 'user')
-                            .map(
-                              (e) => ListTile(
-                                title: Text(
-                                  e.value.content,
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.white70),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                onTap: () {},
-                              ),
-                            )
+                            .map((e) => ListTile(
+                                  title: Text(
+                                    e.value.content,
+                                    style: TextStyle(
+                                        fontSize: 14, color: Colors.white70),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ))
                             .toList(),
                       ],
                     ),
                   ),
-                  const Divider(color: Colors.grey),
+                  Divider(color: Colors.grey),
                   ListTile(
-                    leading: const Icon(Icons.settings),
-                    title: const Text('Settings'),
+                    leading: Icon(Icons.settings),
+                    title: Text('Settings'),
                     onTap: () {
-                      // Settings action
+                      // Settings placeholder
                     },
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                 ],
               ),
             ),
 
-            // Main chat area
+            // Main Chat Area
             Expanded(
               child: Column(
                 children: [
                   // Header
                   Container(
                     height: 60,
-                    color: const Color(0xFF24242A),
+                    color: Color(0xFF24242A),
                     alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
                         IconButton(
@@ -196,8 +196,8 @@ class _MyAppState extends State<MyApp> {
                             });
                           },
                         ),
-                        const SizedBox(width: 8),
-                        const Text('AI',
+                        SizedBox(width: 8),
+                        Text('AI',
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold)),
                       ],
@@ -207,16 +207,16 @@ class _MyAppState extends State<MyApp> {
                   // Messages
                   Expanded(
                     child: Container(
-                      color: const Color(0xFF16161A),
+                      color: Color(0xFF16161A),
                       child: ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(16),
                         itemCount: messages.isEmpty ? 1 : messages.length,
                         itemBuilder: (context, index) {
                           if (messages.isEmpty) {
                             return Center(
                               child: Padding(
-                                padding: const EdgeInsets.only(top: 50),
+                                padding: EdgeInsets.only(top: 50),
                                 child: Text(
                                   'How can I help you?',
                                   style: TextStyle(
@@ -232,18 +232,21 @@ class _MyAppState extends State<MyApp> {
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
                             child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.all(14),
-                              constraints: const BoxConstraints(maxWidth: 600),
+                              margin: EdgeInsets.symmetric(vertical: 6),
+                              padding: EdgeInsets.all(14),
+                              constraints: BoxConstraints(maxWidth: 600),
                               decoration: BoxDecoration(
                                 color: isUser
-                                    ? const Color(0xFF2D2D33)
-                                    : const Color(0xFF24242A),
-                                borderRadius: BorderRadius.circular(12),
+                                    ? Color(0xFF2D2D33)
+                                    : Color(0xFF24242A),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              child: Text(
-                                msg.content,
-                                style: const TextStyle(color: Colors.white),
+                              child: MarkdownBody(
+                                data: msg.content,
+                                styleSheet:
+                                    MarkdownStyleSheet.fromTheme(ThemeData.dark())
+                                        .copyWith(
+                                            p: TextStyle(color: Colors.white)),
                               ),
                             ),
                           );
@@ -252,66 +255,62 @@ class _MyAppState extends State<MyApp> {
                     ),
                   ),
 
-                  // Input + iframe
-                  Column(
-                    children: [
-                      SizedBox(
-                        height: 300,
-                        child: WebView(
-                          initialUrl:
-                              'https://decodernet.mywire.org/ReCore',
-                          javascriptMode: JavascriptMode.unrestricted,
-                          onWebViewCreated: (controller) {
-                            _webViewController = controller;
-                          },
-                          javascriptChannels: {
-                            JavascriptChannel(
-                              name: 'Flutter',
-                              onMessageReceived: (msg) {
-                                _receiveAssistantMessage(msg.message);
-                              },
-                            ),
-                          },
-                        ),
-                      ),
-                      Container(
-                        color: const Color(0xFF16161A),
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _controller,
-                                minLines: 1,
-                                maxLines: 5,
-                                style:
-                                    const TextStyle(color: Colors.white),
-                                decoration: InputDecoration(
-                                  hintText: 'Enter your message...',
-                                  hintStyle: const TextStyle(
-                                      color: Colors.white54),
-                                  filled: true,
-                                  fillColor: const Color(0xFF1F1F25),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(50),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 10),
-                                ),
-                                onSubmitted: (_) => _sendMessage(),
+                  // Input Field
+                  Container(
+                    color: Color(0xFF16161A),
+                    padding: EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            minLines: 1,
+                            maxLines: 5,
+                            style: TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              hintText: 'Enter your message...',
+                              hintStyle: TextStyle(color: Colors.white54),
+                              filled: true,
+                              fillColor: Color(0xFF1F1F25),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(50),
+                                borderSide: BorderSide.none,
                               ),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
                             ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.send),
-                              color: const Color(0xFFA78BFA),
-                              onPressed: _sendMessage,
-                            ),
-                          ],
+                            onSubmitted: (_) => _sendMessage(),
+                          ),
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.send),
+                          color: Color(0xFFA78BFA),
+                          onPressed: _sendMessage,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Headless WebView Engine (1x1)
+                  SizedBox(
+                    width: 1,
+                    height: 1,
+                    child: WebView(
+                      initialUrl: 'https://decodernet.mywire.org/ReCore',
+                      javascriptMode: JavascriptMode.unrestricted,
+                      javascriptChannels: {
+                        JavascriptChannel(
+                          name: 'FlutterBridge',
+                          onMessageReceived: (msg) {
+                            _receiveAssistantMessage(msg.message);
+                          },
+                        ),
+                      },
+                      onWebViewCreated: (controller) {
+                        _webViewController = controller;
+                      },
+                    ),
                   ),
                 ],
               ),
