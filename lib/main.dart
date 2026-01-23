@@ -96,7 +96,8 @@ class _MyAppState extends State<MyApp> {
 
     setState(() {
       messages.add(ChatMessage(role: 'user', content: text));
-      messages.add(ChatMessage(role: 'assistant', content: '...')); // placeholder
+      messages
+          .add(ChatMessage(role: 'assistant', content: '...')); // placeholder
       _controller.clear();
     });
 
@@ -178,8 +179,7 @@ class _MyAppState extends State<MyApp> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   onTap: () {},
-                                ))
-                            .toList(),
+                                )),
                       ],
                     ),
                   ),
@@ -209,8 +209,8 @@ class _MyAppState extends State<MyApp> {
                     child: Row(
                       children: [
                         IconButton(
-                          icon: Icon(
-                              sidebarOpen ? Icons.menu_open : Icons.menu),
+                          icon:
+                              Icon(sidebarOpen ? Icons.menu_open : Icons.menu),
                           onPressed: () {
                             setState(() {
                               sidebarOpen = !sidebarOpen;
