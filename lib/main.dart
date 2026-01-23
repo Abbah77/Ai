@@ -56,10 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // Start with fresh chat on entry (per your request)
   }
-
-  // --- LOGIC: API & STORAGE ---
 
   Future<void> _saveCurrentToHistory() async {
     if (messages.isEmpty) return;
@@ -106,8 +103,10 @@ class _ChatScreenState extends State<ChatScreen> {
         const SnackBar(content: Text("Connection failed. Check Internet or Server.")),
       );
     } finally {
-      setState(() => isLoading = false);
-      _scrollToBottom();
+      if (mounted) {
+        setState(() => isLoading = false);
+        _scrollToBottom();
+      }
     }
   }
 
@@ -123,8 +122,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  // --- UI COMPONENTS ---
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -138,7 +135,7 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: SelectionArea( // ALLOWS LONG-PRESS COPY LIKE GEMINI
+            child: SelectionArea( 
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.symmetric(vertical: 10),
@@ -163,7 +160,8 @@ class _ChatScreenState extends State<ChatScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: isUser ? Colors.transparent : const Color(0xFF1E1F23).withOpacity(0.4),
+      // FIXED: withOpacity replaced with withValues
+      color: isUser ? Colors.transparent : const Color(0xFF1E1F23).withValues(alpha: 0.4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -255,7 +253,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                 label: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.add, color: Colors.black), Text(" New Chat", style: TextStyle(color: Colors.black))],
+                  children: [
+                    Icon(Icons.add, color: Colors.black), 
+                    Text(" New Chat", style: TextStyle(color: Colors.black))
+                  ],
                 ),
                 onPressed: () {
                   _saveCurrentToHistory();
@@ -267,7 +268,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const Expanded(child: Center(child: Text("Chat History", style: TextStyle(color: Colors.grey)))),
           const Divider(color: Colors.white10),
-          // SETTINGS AT THE BOTTOM AS PER YOUR SCREENSHOT
           ListTile(
             leading: const Icon(Icons.settings_outlined, color: Colors.white70),
             title: const Text("Settings", style: TextStyle(color: Colors.white70)),
@@ -279,7 +279,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-// MODERN TYPING INDICATOR (DOTS)
 class TypingIndicator extends StatefulWidget {
   const TypingIndicator({super.key});
   @override
@@ -312,7 +311,11 @@ class _TypingIndicatorState extends State<TypingIndicator> with TickerProviderSt
           builder: (context, _) => Container(
             margin: const EdgeInsets.only(right: 4),
             height: 8, width: 8,
-            decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3 + (c.value * 0.7)), shape: BoxShape.circle),
+            // FIXED: withOpacity replaced with withValues
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.3 + (c.value * 0.7)), 
+              shape: BoxShape.circle
+            ),
           ),
         )).toList(),
       ),
