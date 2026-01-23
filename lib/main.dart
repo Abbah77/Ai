@@ -62,13 +62,13 @@ class _ChatScreenState extends State<ChatScreen> {
     if (messages.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getStringList('all_sessions') ?? [];
-    
+
     Map<String, dynamic> session = {
       'title': messages.first.content.split('\n').first.substring(0, 20),
       'date': DateTime.now().toIso8601String(),
       'chat': messages.map((m) => m.toMap()).toList(),
     };
-    
+
     stored.insert(0, jsonEncode(session));
     await prefs.setStringList('all_sessions', stored);
   }
@@ -85,22 +85,26 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     try {
-      final response = await http.post(
-        Uri.parse("https://decodernet-servers.onrender.com/ReCore/chat"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(messages.map((m) => m.toMap()).toList()),
-      ).timeout(const Duration(seconds: 45));
+      final response = await http
+          .post(
+            Uri.parse("https://decodernet-servers.onrender.com/ReCore/chat"),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(messages.map((m) => m.toMap()).toList()),
+          )
+          .timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          messages.add(ChatMessage(role: 'assistant', content: data['response']));
+          messages
+              .add(ChatMessage(role: 'assistant', content: data['response']));
         });
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Connection failed. Check Internet or Server.")),
+        const SnackBar(
+            content: Text("Connection failed. Check Internet or Server.")),
       );
     } finally {
       if (mounted) {
@@ -127,7 +131,8 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF131314),
       appBar: AppBar(
-        title: const Text('here', style: TextStyle(fontWeight: FontWeight.bold)),
+        title:
+            const Text('here', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -135,14 +140,14 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: SelectionArea( 
+            child: SelectionArea(
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 itemCount: messages.length + (isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index == messages.length) return const TypingIndicator();
-                  
+
                   final msg = messages[index];
                   final isUser = msg.role == 'user';
                   return _buildMessageTile(msg, isUser);
@@ -161,22 +166,27 @@ class _ChatScreenState extends State<ChatScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       // FIXED: withOpacity replaced with withValues
-      color: isUser ? Colors.transparent : const Color(0xFF1E1F23).withValues(alpha: 0.4),
+      color: isUser
+          ? Colors.transparent
+          : const Color(0xFF1E1F23).withValues(alpha: 0.4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(isUser ? Icons.account_circle_outlined : Icons.auto_awesome, 
-                   color: isUser ? Colors.grey : const Color(0xFFA78BFA), size: 24),
+              Icon(isUser ? Icons.account_circle_outlined : Icons.auto_awesome,
+                  color: isUser ? Colors.grey : const Color(0xFFA78BFA),
+                  size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: MarkdownBody(
                   data: msg.content,
                   styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(color: Colors.white, fontSize: 16, height: 1.6),
-                    code: GoogleFonts.firaCode(backgroundColor: const Color(0xFF2D2E33)),
+                    p: const TextStyle(
+                        color: Colors.white, fontSize: 16, height: 1.6),
+                    code: GoogleFonts.firaCode(
+                        backgroundColor: const Color(0xFF2D2E33)),
                     codeblockDecoration: BoxDecoration(
                       color: Colors.black,
                       borderRadius: BorderRadius.circular(12),
@@ -190,10 +200,12 @@ class _ChatScreenState extends State<ChatScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: IconButton(
-                icon: const Icon(Icons.copy_all_rounded, size: 18, color: Colors.grey),
+                icon: const Icon(Icons.copy_all_rounded,
+                    size: 18, color: Colors.grey),
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: msg.content));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Copied to clipboard")));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Copied to clipboard")));
                 },
               ),
             )
@@ -250,11 +262,12 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.all(16.0),
               child: ActionChip(
                 backgroundColor: const Color(0xFFA78BFA),
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                 label: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add, color: Colors.black), 
+                    Icon(Icons.add, color: Colors.black),
                     Text(" New Chat", style: TextStyle(color: Colors.black))
                   ],
                 ),
@@ -266,11 +279,15 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-          const Expanded(child: Center(child: Text("Chat History", style: TextStyle(color: Colors.grey)))),
+          const Expanded(
+              child: Center(
+                  child: Text("Chat History",
+                      style: TextStyle(color: Colors.grey)))),
           const Divider(color: Colors.white10),
           ListTile(
             leading: const Icon(Icons.settings_outlined, color: Colors.white70),
-            title: const Text("Settings", style: TextStyle(color: Colors.white70)),
+            title:
+                const Text("Settings", style: TextStyle(color: Colors.white70)),
             onTap: () {},
           ),
         ],
@@ -285,12 +302,16 @@ class TypingIndicator extends StatefulWidget {
   State<TypingIndicator> createState() => _TypingIndicatorState();
 }
 
-class _TypingIndicatorState extends State<TypingIndicator> with TickerProviderStateMixin {
+class _TypingIndicatorState extends State<TypingIndicator>
+    with TickerProviderStateMixin {
   late List<AnimationController> _controllers;
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(3, (i) => AnimationController(vsync: this, duration: const Duration(milliseconds: 400)));
+    _controllers = List.generate(
+        3,
+        (i) => AnimationController(
+            vsync: this, duration: const Duration(milliseconds: 400)));
     _startAnimations();
   }
 
@@ -306,25 +327,29 @@ class _TypingIndicatorState extends State<TypingIndicator> with TickerProviderSt
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
       child: Row(
-        children: _controllers.map((c) => AnimatedBuilder(
-          animation: c,
-          builder: (context, _) => Container(
-            margin: const EdgeInsets.only(right: 4),
-            height: 8, width: 8,
-            // FIXED: withOpacity replaced with withValues
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.3 + (c.value * 0.7)), 
-              shape: BoxShape.circle
-            ),
-          ),
-        )).toList(),
+        children: _controllers
+            .map((c) => AnimatedBuilder(
+                  animation: c,
+                  builder: (context, _) => Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    height: 8, width: 8,
+                    // FIXED: withOpacity replaced with withValues
+                    decoration: BoxDecoration(
+                        color: Colors.grey
+                            .withValues(alpha: 0.3 + (c.value * 0.7)),
+                        shape: BoxShape.circle),
+                  ),
+                ))
+            .toList(),
       ),
     );
   }
 
   @override
   void dispose() {
-    for (var c in _controllers) { c.dispose(); }
+    for (var c in _controllers) {
+      c.dispose();
+    }
     super.dispose();
   }
 }
