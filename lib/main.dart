@@ -200,8 +200,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final res = await _client!.post(
         Uri.parse("https://decodernet-servers.onrender.com/ReCore/chat"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(
-            _messages.map((e) => e.toJson()).toList()),
+        body: jsonEncode(_messages.map((e) => e.toJson()).toList()),
       );
 
       if (res.statusCode == 200) {
@@ -209,9 +208,8 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (_) {
       if (_isLoading) {
-        _messages.add(ChatMessage(
-            role: 'assistant',
-            content: "⚠️ Connection error."));
+        _messages.add(
+            ChatMessage(role: 'assistant', content: "⚠️ Connection error."));
       }
     } finally {
       _isLoading = false;
@@ -231,17 +229,14 @@ class _ChatScreenState extends State<ChatScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isUser
-              ? const Color(0xFF3D5AFE)
-              : const Color(0xFF1E1F23),
+          color: isUser ? const Color(0xFF3D5AFE) : const Color(0xFF1E1F23),
           borderRadius: BorderRadius.circular(16),
         ),
         child: MarkdownBody(
           data: m.content,
           selectable: true,
           styleSheet: MarkdownStyleSheet(
-            code: GoogleFonts.firaCode(
-                backgroundColor: Colors.black54),
+            code: GoogleFonts.firaCode(backgroundColor: Colors.black54),
             codeblockDecoration: BoxDecoration(
               color: Colors.black,
               borderRadius: BorderRadius.circular(8),
@@ -282,15 +277,13 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text("ReCore AI",
-            style:
-                GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           if (_isLoading)
             TextButton(
               onPressed: _stopGenerating,
-              child: const Text("STOP",
-                  style: TextStyle(color: Colors.red)),
+              child: const Text("STOP", style: TextStyle(color: Colors.red)),
             )
         ],
       ),
@@ -314,8 +307,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: _sessions
                     .map((s) => ListTile(
                           title: Text(s.title,
-                              style: const TextStyle(
-                                  color: Colors.white)),
+                              style: const TextStyle(color: Colors.white)),
                           onTap: () {
                             setState(() {
                               _sessionId = s.id;
@@ -329,10 +321,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const Divider(),
             ListTile(
-              leading:
-                  const Icon(Icons.settings, color: Colors.grey),
-              title: const Text("Settings",
-                  style: TextStyle(color: Colors.grey)),
+              leading: const Icon(Icons.settings, color: Colors.grey),
+              title:
+                  const Text("Settings", style: TextStyle(color: Colors.grey)),
               onTap: () {},
             ),
           ],
@@ -346,8 +337,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 : ListView.builder(
                     controller: _scrollController,
                     itemCount: _messages.length,
-                    itemBuilder: (_, i) =>
-                        _bubble(_messages[i]),
+                    itemBuilder: (_, i) => _bubble(_messages[i]),
                   ),
           ),
           Padding(
@@ -360,11 +350,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     decoration: InputDecoration(
                       hintText: "Ask anything…",
                       filled: true,
-                      fillColor:
-                          const Color(0xFF1E1F23),
+                      fillColor: const Color(0xFF1E1F23),
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
                       ),
                     ),
@@ -373,11 +361,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor:
-                      const Color(0xFFA78BFA),
+                  backgroundColor: const Color(0xFFA78BFA),
                   child: IconButton(
-                    icon: const Icon(Icons.send,
-                        color: Colors.black),
+                    icon: const Icon(Icons.send, color: Colors.black),
                     onPressed: _send,
                   ),
                 )
