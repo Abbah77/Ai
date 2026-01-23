@@ -14,14 +14,14 @@ dependencies:
   shared_preferences: ^2.2.2
   # Animations for smooth UI effects
   animations: ^2.0.9
-  # WebView to load your iframe AI
+  # WebView to load your hidden iframe AI
   webview_flutter: ^4.1.1
   # Icons
   iconsax_flutter: ^1.0.0
   # Haptic feedback for button press
   haptic_feedback: ^0.6.4+3
-  # Markdown support for AI responses
-  flutter_markdown: ^0.7.5
+  # Markdown rendering for AI responses
+  flutter_markdown: ^0.6.11
 
 dev_dependencies:
   flutter_test:
