@@ -11,22 +11,12 @@ dependencies:
     sdk: flutter
 
   # --- LOGIC & BACKEND ---
-  # Connects to https://decodernet-servers.onrender.com/ReCore/chat
   http: ^1.1.0
-  # Stores chat threads and settings locally
   shared_preferences: ^2.2.2
 
   # --- PREMIUM UI & UX ---
-  # Typography for the "here" brand
   google_fonts: ^6.1.0
-  # Renders AI code blocks and markdown
   flutter_markdown: ^0.6.11
-  # Modern icons for the drawer and buttons
-  iconsax_flutter: ^1.0.0
-  # Smooth animations for typing dots and transitions
-  animations: ^2.0.9
-  # Fixes keyboard overlap on mobile devices
-  flutter_keyboard_visibility: ^6.0.0
 
 dev_dependencies:
   flutter_test:
