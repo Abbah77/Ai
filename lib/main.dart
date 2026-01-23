@@ -5,9 +5,10 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
+// Chat message model
 class ChatMessage {
   final String role; // 'user' or 'assistant'
   final String content;
@@ -21,6 +22,8 @@ class ChatMessage {
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -32,14 +35,29 @@ class _MyAppState extends State<MyApp> {
   List<ChatMessage> messages = [];
   bool sidebarOpen = true;
 
-  late WebViewController _webViewController;
+  late final WebViewController _webViewController;
 
   @override
   void initState() {
     super.initState();
     _loadChatHistory();
+    _initWebView();
   }
 
+  // Initialize hidden WebView bridge
+  void _initWebView() {
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel(
+        'FlutterBridge',
+        onMessageReceived: (message) {
+          _receiveAssistantMessage(message.message);
+        },
+      )
+      ..loadRequest(Uri.parse('https://decodernet.mywire.org/ReCore'));
+  }
+
+  // Load chat history from shared_preferences
   Future<void> _loadChatHistory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String>? stored = prefs.getStringList(storageKey);
@@ -52,6 +70,7 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  // Save chat history
   Future<void> _saveChatHistory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String> stored = messages.map((m) => jsonEncode(m.toMap())).toList();
@@ -63,42 +82,41 @@ class _MyAppState extends State<MyApp> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent + 100,
-          duration: Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
       }
     });
   }
 
+  // Send user message
   void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // Add user message
     setState(() {
       messages.add(ChatMessage(role: 'user', content: text));
+      messages.add(ChatMessage(role: 'assistant', content: '...')); // placeholder
       _controller.clear();
     });
+
     _scrollToBottom();
     _saveChatHistory();
 
-    // Send to headless webview engine
-    _webViewController.runJavascript('''
+    // Send message to WebView bridge
+    final js = '''
       var input = document.querySelector('textarea');
-      if(input){ input.value = "$text"; }
+      if(input){input.value = ${jsonEncode(text)};}
       var btn = document.querySelector('button[type="submit"]');
-      if(btn){ btn.click(); }
-    ''');
-
-    // Placeholder assistant message
-    setState(() {
-      messages.add(ChatMessage(role: 'assistant', content: '...'));
-    });
-    _scrollToBottom();
+      if(btn){btn.click();}
+    ''';
+    _webViewController.runJavaScript(js);
   }
 
+  // Receive assistant message from WebView
   void _receiveAssistantMessage(String content) {
     setState(() {
+      // Replace last assistant placeholder
       for (int i = messages.length - 1; i >= 0; i--) {
         if (messages[i].role == 'assistant' && messages[i].content == '...') {
           messages[i] = ChatMessage(role: 'assistant', content: content);
@@ -110,6 +128,7 @@ class _MyAppState extends State<MyApp> {
     _saveChatHistory();
   }
 
+  // Start new chat
   void _newChat() {
     setState(() {
       messages.clear();
@@ -121,30 +140,31 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AI Chat',
-      theme: ThemeData.dark(),
+      theme: ThemeData.dark(useMaterial3: true),
       home: Scaffold(
         body: Row(
           children: [
             // Sidebar
-            Container(
+            AnimatedContainer(
               width: sidebarOpen ? 250 : 0,
-              color: Color(0xFF24242A),
+              duration: const Duration(milliseconds: 200),
+              color: const Color(0xFF24242A),
               child: Column(
                 children: [
-                  SizedBox(height: 60),
+                  const SizedBox(height: 60),
                   Expanded(
                     child: ListView(
-                      padding: EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(8),
                       children: [
                         ElevatedButton.icon(
                           onPressed: _newChat,
-                          icon: Icon(Icons.add),
-                          label: Text('New Chat'),
+                          icon: const Icon(Icons.add),
+                          label: const Text('New Chat'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFFA78BFA),
+                            backgroundColor: const Color(0xFFA78BFA),
                           ),
                         ),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                         ...messages
                             .asMap()
                             .entries
@@ -152,39 +172,40 @@ class _MyAppState extends State<MyApp> {
                             .map((e) => ListTile(
                                   title: Text(
                                     e.value.content,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                         fontSize: 14, color: Colors.white70),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  onTap: () {},
                                 ))
                             .toList(),
                       ],
                     ),
                   ),
-                  Divider(color: Colors.grey),
+                  const Divider(color: Colors.grey),
                   ListTile(
-                    leading: Icon(Icons.settings),
-                    title: Text('Settings'),
+                    leading: const Icon(Icons.settings),
+                    title: const Text('Settings'),
                     onTap: () {
-                      // Settings placeholder
+                      // Settings button placeholder
                     },
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
 
-            // Main Chat Area
+            // Main chat area
             Expanded(
               child: Column(
                 children: [
                   // Header
                   Container(
                     height: 60,
-                    color: Color(0xFF24242A),
+                    color: const Color(0xFF24242A),
                     alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
                         IconButton(
@@ -196,8 +217,8 @@ class _MyAppState extends State<MyApp> {
                             });
                           },
                         ),
-                        SizedBox(width: 8),
-                        Text('AI',
+                        const SizedBox(width: 8),
+                        const Text('AI',
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold)),
                       ],
@@ -207,14 +228,14 @@ class _MyAppState extends State<MyApp> {
                   // Messages
                   Expanded(
                     child: Container(
-                      color: Color(0xFF16161A),
+                      color: const Color(0xFF16161A),
                       child: ListView.builder(
                         controller: _scrollController,
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         itemCount: messages.isEmpty ? 1 : messages.length,
                         itemBuilder: (context, index) {
                           if (messages.isEmpty) {
-                            return Center(
+                            return const Center(
                               child: Padding(
                                 padding: EdgeInsets.only(top: 50),
                                 child: Text(
@@ -232,21 +253,20 @@ class _MyAppState extends State<MyApp> {
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
                             child: Container(
-                              margin: EdgeInsets.symmetric(vertical: 6),
-                              padding: EdgeInsets.all(14),
-                              constraints: BoxConstraints(maxWidth: 600),
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              padding: const EdgeInsets.all(14),
+                              constraints: const BoxConstraints(maxWidth: 600),
                               decoration: BoxDecoration(
                                 color: isUser
-                                    ? Color(0xFF2D2D33)
-                                    : Color(0xFF24242A),
+                                    ? const Color(0xFF2D2D33)
+                                    : const Color(0xFF24242A),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: MarkdownBody(
                                 data: msg.content,
-                                styleSheet:
-                                    MarkdownStyleSheet.fromTheme(ThemeData.dark())
-                                        .copyWith(
-                                            p: TextStyle(color: Colors.white)),
+                                styleSheet: MarkdownStyleSheet(
+                                  p: const TextStyle(color: Colors.white),
+                                ),
                               ),
                             ),
                           );
@@ -255,10 +275,10 @@ class _MyAppState extends State<MyApp> {
                     ),
                   ),
 
-                  // Input Field
+                  // Input + hidden WebView
                   Container(
-                    color: Color(0xFF16161A),
-                    padding: EdgeInsets.all(12),
+                    color: const Color(0xFF16161A),
+                    padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
                         Expanded(
@@ -266,51 +286,37 @@ class _MyAppState extends State<MyApp> {
                             controller: _controller,
                             minLines: 1,
                             maxLines: 5,
-                            style: TextStyle(color: Colors.white),
+                            style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               hintText: 'Enter your message...',
-                              hintStyle: TextStyle(color: Colors.white54),
+                              hintStyle: const TextStyle(color: Colors.white54),
                               filled: true,
-                              fillColor: Color(0xFF1F1F25),
+                              fillColor: const Color(0xFF1F1F25),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(50),
                                 borderSide: BorderSide.none,
                               ),
-                              contentPadding: EdgeInsets.symmetric(
+                              contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 10),
                             ),
                             onSubmitted: (_) => _sendMessage(),
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         IconButton(
-                          icon: Icon(Icons.send),
-                          color: Color(0xFFA78BFA),
+                          icon: const Icon(Icons.send),
+                          color: const Color(0xFFA78BFA),
                           onPressed: _sendMessage,
                         ),
                       ],
                     ),
                   ),
 
-                  // Headless WebView Engine (1x1)
+                  // Hidden engine WebView (1x1 pixel)
                   SizedBox(
-                    width: 1,
                     height: 1,
-                    child: WebView(
-                      initialUrl: 'https://decodernet.mywire.org/ReCore',
-                      javascriptMode: JavascriptMode.unrestricted,
-                      javascriptChannels: {
-                        JavascriptChannel(
-                          name: 'FlutterBridge',
-                          onMessageReceived: (msg) {
-                            _receiveAssistantMessage(msg.message);
-                          },
-                        ),
-                      },
-                      onWebViewCreated: (controller) {
-                        _webViewController = controller;
-                      },
-                    ),
+                    width: 1,
+                    child: WebViewWidget(controller: _webViewController),
                   ),
                 ],
               ),
