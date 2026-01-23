@@ -1,19 +1,22 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'dart:convert';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(MyApp());
 }
 
 class ChatMessage {
   final String role; // 'user' or 'assistant'
   final String content;
+
   ChatMessage({required this.role, required this.content});
 
   Map<String, String> toMap() => {'role': role, 'content': content};
-  factory ChatMessage.fromMap(Map<String, dynamic> map) => 
+
+  factory ChatMessage.fromMap(Map<String, dynamic> map) =>
       ChatMessage(role: map['role'], content: map['content']);
 }
 
@@ -29,7 +32,7 @@ class _MyAppState extends State<MyApp> {
   List<ChatMessage> messages = [];
   bool sidebarOpen = true;
 
-  late WebViewController _webViewController;
+  late InAppWebViewController _webViewController;
 
   @override
   void initState() {
@@ -78,8 +81,9 @@ class _MyAppState extends State<MyApp> {
     _saveChatHistory();
 
     // Send message to iframe via JS
-    _webViewController.runJavaScript(
-      "window.postMessage(${jsonEncode({'role': 'user', 'content': text})}, '*');"
+    _webViewController.evaluateJavascript(
+      source:
+          "window.postMessage(${jsonEncode({'role': 'user', 'content': text})}, '*');",
     );
 
     // Add placeholder assistant message
@@ -91,7 +95,6 @@ class _MyAppState extends State<MyApp> {
 
   void _receiveAssistantMessage(String content) {
     setState(() {
-      // Replace last assistant placeholder
       for (int i = messages.length - 1; i >= 0; i--) {
         if (messages[i].role == 'assistant' && messages[i].content == '...') {
           messages[i] = ChatMessage(role: 'assistant', content: content);
@@ -113,13 +116,15 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AI Chat',
+      debugShowCheckedModeBanner: false,
+      title: 'AI',
       theme: ThemeData.dark(),
       home: Scaffold(
         body: Row(
           children: [
             // Sidebar
-            Container(
+            AnimatedContainer(
+              duration: Duration(milliseconds: 200),
               width: sidebarOpen ? 250 : 0,
               color: Color(0xFF24242A),
               child: Column(
@@ -146,9 +151,7 @@ class _MyAppState extends State<MyApp> {
                                   title: Text(
                                     e.value.content,
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.white70,
-                                    ),
+                                        fontSize: 14, color: Colors.white70),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -163,7 +166,7 @@ class _MyAppState extends State<MyApp> {
                     leading: Icon(Icons.settings),
                     title: Text('Settings'),
                     onTap: () {
-                      // Settings placeholder
+                      // Settings
                     },
                   ),
                   SizedBox(height: 10),
@@ -184,7 +187,8 @@ class _MyAppState extends State<MyApp> {
                     child: Row(
                       children: [
                         IconButton(
-                          icon: Icon(sidebarOpen ? Icons.menu_open : Icons.menu),
+                          icon: Icon(
+                              sidebarOpen ? Icons.menu_open : Icons.menu),
                           onPressed: () {
                             setState(() {
                               sidebarOpen = !sidebarOpen;
@@ -192,7 +196,9 @@ class _MyAppState extends State<MyApp> {
                           },
                         ),
                         SizedBox(width: 8),
-                        Text('AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text('AI',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -212,7 +218,8 @@ class _MyAppState extends State<MyApp> {
                                 padding: EdgeInsets.only(top: 50),
                                 child: Text(
                                   'How can I help you?',
-                                  style: TextStyle(color: Colors.white54, fontSize: 18),
+                                  style: TextStyle(
+                                      color: Colors.white54, fontSize: 18),
                                 ),
                               ),
                             );
@@ -220,13 +227,17 @@ class _MyAppState extends State<MyApp> {
                           final msg = messages[index];
                           bool isUser = msg.role == 'user';
                           return Align(
-                            alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                            alignment: isUser
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
                             child: Container(
                               margin: EdgeInsets.symmetric(vertical: 6),
                               padding: EdgeInsets.all(14),
                               constraints: BoxConstraints(maxWidth: 600),
                               decoration: BoxDecoration(
-                                color: isUser ? Color(0xFF2D2D33) : Color(0xFF24242A),
+                                color: isUser
+                                    ? Color(0xFF2D2D33)
+                                    : Color(0xFF24242A),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -245,19 +256,21 @@ class _MyAppState extends State<MyApp> {
                     children: [
                       Container(
                         height: 300,
-                        child: WebView(
-                          initialUrl: 'https://decodernet.mywire.org/ReCore',
-                          javascriptMode: JavascriptMode.unrestricted,
+                        child: InAppWebView(
+                          initialUrlRequest: URLRequest(
+                              url: Uri.parse(
+                                  'https://decodernet.mywire.org/ReCore')),
+                          initialOptions: InAppWebViewGroupOptions(
+                            crossPlatform: InAppWebViewOptions(
+                              javaScriptEnabled: true,
+                            ),
+                          ),
                           onWebViewCreated: (controller) {
                             _webViewController = controller;
                           },
-                          javascriptChannels: {
-                            JavascriptChannel(
-                              name: 'Flutter',
-                              onMessageReceived: (msg) {
-                                _receiveAssistantMessage(msg.message);
-                              },
-                            )
+                          onConsoleMessage: (controller, consoleMessage) {
+                            // Receive assistant message
+                            _receiveAssistantMessage(consoleMessage.message);
                           },
                         ),
                       ),
@@ -274,14 +287,16 @@ class _MyAppState extends State<MyApp> {
                                 style: TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
                                   hintText: 'Enter your message...',
-                                  hintStyle: TextStyle(color: Colors.white54),
+                                  hintStyle:
+                                      TextStyle(color: Colors.white54),
                                   filled: true,
                                   fillColor: Color(0xFF1F1F25),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(50),
                                     borderSide: BorderSide.none,
                                   ),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 10),
                                 ),
                                 onSubmitted: (_) => _sendMessage(),
                               ),
