@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() => runApp(const MyApp());
+
+/* ===================== APP ===================== */
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -14,20 +15,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'here',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFA78BFA),
-          brightness: Brightness.dark,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF131314),
+        textTheme: GoogleFonts.interTextTheme(
+          ThemeData.dark().textTheme,
         ),
-        textTheme: GoogleFonts.ralewayTextTheme(ThemeData.dark().textTheme),
       ),
       home: const ChatScreen(),
     );
   }
 }
+
+/* ===================== MODELS ===================== */
 
 class ChatMessage {
   final String role;
@@ -35,321 +35,243 @@ class ChatMessage {
 
   ChatMessage({required this.role, required this.content});
 
-  Map<String, String> toMap() => {'role': role, 'content': content};
-  factory ChatMessage.fromMap(Map<String, dynamic> map) =>
-      ChatMessage(role: map['role'], content: map['content']);
+  Map<String, dynamic> toJson() => {'role': role, 'content': content};
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) =>
+      ChatMessage(role: json['role'], content: json['content']);
 }
+
+class ChatSession {
+  final String id;
+  final String title;
+  final List<ChatMessage> messages;
+
+  ChatSession({required this.id, required this.title, required this.messages});
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'messages': messages.map((e) => e.toJson()).toList(),
+      };
+
+  factory ChatSession.fromJson(Map<String, dynamic> json) => ChatSession(
+        id: json['id'],
+        title: json['title'],
+        messages: (json['messages'] as List)
+            .map((e) => ChatMessage.fromJson(e))
+            .toList(),
+      );
+}
+
+/* ===================== STORAGE ===================== */
+
+class ChatStorage {
+  static const key = 'chat_sessions';
+
+  static Future<List<ChatSession>> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(key) ?? [];
+    return raw.map((e) => ChatSession.fromJson(jsonDecode(e))).toList();
+  }
+
+  static Future<void> save(ChatSession session) async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessions = await load();
+
+    sessions.removeWhere((s) => s.id == session.id);
+    sessions.insert(0, session);
+
+    await prefs.setStringList(
+      key,
+      sessions.map((e) => jsonEncode(e.toJson())).toList(),
+    );
+  }
+}
+
+/* ===================== UI ===================== */
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
-
+  
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final TextEditingController controller = TextEditingController();
+  final ScrollController scroll = ScrollController();
+
   List<ChatMessage> messages = [];
-  bool isLoading = false;
+  List<ChatSession> sessions = [];
+  String sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+  bool loading = false;
 
   @override
   void initState() {
     super.initState();
+    _loadSessions();
   }
 
-  Future<void> _saveCurrentToHistory() async {
+  Future<void> _loadSessions() async {
+    sessions = await ChatStorage.load();
+    setState(() {});
+  }
+
+  Future<void> _saveSession() async {
     if (messages.isEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getStringList('all_sessions') ?? [];
-
-    Map<String, dynamic> session = {
-      'title': messages.first.content.split('\n').first.substring(0, 20),
-      'date': DateTime.now().toIso8601String(),
-      'chat': messages.map((m) => m.toMap()).toList(),
-    };
-
-    stored.insert(0, jsonEncode(session));
-    await prefs.setStringList('all_sessions', stored);
+    await ChatStorage.save(
+      ChatSession(
+        id: sessionId,
+        title: messages.first.content.substring(
+          0,
+          messages.first.content.length.clamp(0, 25),
+        ),
+        messages: messages,
+      ),
+    );
+    _loadSessions();
   }
 
-  Future<void> _sendMessage() async {
-    final text = _controller.text.trim();
+  Future<void> send() async {
+    final String text = controller.text.trim();
     if (text.isEmpty) return;
 
     setState(() {
       messages.add(ChatMessage(role: 'user', content: text));
-      isLoading = true;
-      _controller.clear();
+      controller.clear();
+      loading = true;
     });
-    _scrollToBottom();
+
+    scroll.jumpTo(scroll.position.maxScrollExtent + 100);
 
     try {
-      final response = await http
-          .post(
-            Uri.parse("https://decodernet-servers.onrender.com/ReCore/chat"),
-            headers: {"Content-Type": "application/json"},
-            body: jsonEncode(messages.map((m) => m.toMap()).toList()),
-          )
-          .timeout(const Duration(seconds: 45));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          messages
-              .add(ChatMessage(role: 'assistant', content: data['response']));
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Connection failed. Check Internet or Server.")),
+      final http.Response res = await http.post(
+        Uri.parse("https://decodernet-servers.onrender.com/ReCore/chat"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(messages.map((e) => e.toJson()).toList()),
       );
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-        _scrollToBottom();
+
+      if (res.statusCode == 200) {
+        messages.add(ChatMessage(
+          role: 'assistant',
+          content: jsonDecode(res.body)['response'],
+        ));
       }
+    } finally {
+      loading = false;
+      setState(() {});
+      _saveSession();
     }
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutQuart,
-        );
-      }
-    });
+  Widget bubble(ChatMessage m) {
+    final bool isUser = m.role == 'user';
+
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: GestureDetector(
+        onLongPress: () => Clipboard.setData(ClipboardData(text: m.content)),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.all(14),
+          constraints: const BoxConstraints(maxWidth: 320),
+          decoration: BoxDecoration(
+            color: isUser
+                ? const Color(0xFFA78BFA)
+                : const Color(0xFF1E1F23),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Text(
+            m.content,
+            style: TextStyle(
+              color: isUser ? Colors.black : Colors.white,
+              height: 1.5,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF131314),
       appBar: AppBar(
-        title:
-            const Text('here', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Chat"),
         backgroundColor: Colors.transparent,
-        elevation: 0,
       ),
-      drawer: _buildModernDrawer(),
-      body: Column(
-        children: [
-          Expanded(
-            child: SelectionArea(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                itemCount: messages.length + (isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == messages.length) return const TypingIndicator();
-
-                  final msg = messages[index];
-                  final isUser = msg.role == 'user';
-                  return _buildMessageTile(msg, isUser);
-                },
-              ),
-            ),
-          ),
-          _buildInputArea(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageTile(ChatMessage msg, bool isUser) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      // FIXED: withOpacity replaced with withValues
-      color: isUser
-          ? Colors.transparent
-          : const Color(0xFF1E1F23).withValues(alpha: 0.4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(isUser ? Icons.account_circle_outlined : Icons.auto_awesome,
-                  color: isUser ? Colors.grey : const Color(0xFFA78BFA),
-                  size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: MarkdownBody(
-                  data: msg.content,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(
-                        color: Colors.white, fontSize: 16, height: 1.6),
-                    code: GoogleFonts.firaCode(
-                        backgroundColor: const Color(0xFF2D2E33)),
-                    codeblockDecoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (!isUser)
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                icon: const Icon(Icons.copy_all_rounded,
-                    size: 18, color: Colors.grey),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: msg.content));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Copied to clipboard")));
-                },
-              ),
-            )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputArea() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1F23),
-          borderRadius: BorderRadius.circular(35),
-        ),
-        child: Row(
+      drawer: Drawer(
+        backgroundColor: const Color(0xFF1E1F23),
+        child: ListView(
           children: [
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: "Enter your message...",
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 20),
-                ),
-                onSubmitted: (_) => _sendMessage(),
-              ),
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text("Chat History",
+                  style: TextStyle(color: Colors.grey)),
             ),
-            GestureDetector(
-              onTap: _sendMessage,
-              child: const CircleAvatar(
-                backgroundColor: Color(0xFFA78BFA),
-                radius: 22,
-                child: Icon(Icons.arrow_upward_rounded, color: Colors.black),
+            ...sessions.map(
+              (s) => ListTile(
+                title: Text(s.title,
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  setState(() {
+                    sessionId = s.id;
+                    messages = s.messages;
+                  });
+                  Navigator.pop(context);
+                },
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildModernDrawer() {
-    return Drawer(
-      backgroundColor: const Color(0xFF1E1F23),
-      child: Column(
+      body: Column(
         children: [
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ActionChip(
-                backgroundColor: const Color(0xFFA78BFA),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                label: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add, color: Colors.black),
-                    Text(" New Chat", style: TextStyle(color: Colors.black))
-                  ],
-                ),
-                onPressed: () {
-                  _saveCurrentToHistory();
-                  setState(() => messages.clear());
-                  Navigator.pop(context);
-                },
-              ),
+          Expanded(
+            child: ListView(
+              controller: scroll,
+              children: [
+                ...messages.map(bubble),
+                if (loading)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text("Typing...",
+                        style: TextStyle(color: Colors.grey)),
+                  )
+              ],
             ),
           ),
-          const Expanded(
-              child: Center(
-                  child: Text("Chat History",
-                      style: TextStyle(color: Colors.grey)))),
-          const Divider(color: Colors.white10),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined, color: Colors.white70),
-            title:
-                const Text("Settings", style: TextStyle(color: Colors.white70)),
-            onTap: () {},
-          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1F23),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(
+                        hintText: "Message…",
+                        border: InputBorder.none,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 20),
+                      ),
+                      onSubmitted: (_) => send(),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_upward_rounded),
+                    onPressed: send,
+                  ),
+                ],
+              ),
+            ),
+          )
         ],
       ),
     );
-  }
-}
-
-class TypingIndicator extends StatefulWidget {
-  const TypingIndicator({super.key});
-  @override
-  State<TypingIndicator> createState() => _TypingIndicatorState();
-}
-
-class _TypingIndicatorState extends State<TypingIndicator>
-    with TickerProviderStateMixin {
-  late List<AnimationController> _controllers;
-  @override
-  void initState() {
-    super.initState();
-    _controllers = List.generate(
-        3,
-        (i) => AnimationController(
-            vsync: this, duration: const Duration(milliseconds: 400)));
-    _startAnimations();
-  }
-
-  void _startAnimations() async {
-    for (var controller in _controllers) {
-      await Future.delayed(const Duration(milliseconds: 150));
-      if (mounted) controller.repeat(reverse: true);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-      child: Row(
-        children: _controllers
-            .map((c) => AnimatedBuilder(
-                  animation: c,
-                  builder: (context, _) => Container(
-                    margin: const EdgeInsets.only(right: 4),
-                    height: 8, width: 8,
-                    // FIXED: withOpacity replaced with withValues
-                    decoration: BoxDecoration(
-                        color: Colors.grey
-                            .withValues(alpha: 0.3 + (c.value * 0.7)),
-                        shape: BoxShape.circle),
-                  ),
-                ))
-            .toList(),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    for (var c in _controllers) {
-      c.dispose();
-    }
-    super.dispose();
   }
 }
