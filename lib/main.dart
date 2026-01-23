@@ -65,7 +65,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final stored = prefs.getStringList('chat_history');
     if (stored != null) {
       setState(() {
-        messages = stored.map((s) => ChatMessage.fromMap(jsonDecode(s))).toList();
+        messages =
+            stored.map((s) => ChatMessage.fromMap(jsonDecode(s))).toList();
       });
       _scrollToBottom();
     }
@@ -110,7 +111,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          messages.add(ChatMessage(role: 'assistant', content: data['response']));
+          messages
+              .add(ChatMessage(role: 'assistant', content: data['response']));
         });
       }
     } catch (e) {
@@ -130,7 +132,8 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF131314),
       appBar: AppBar(
-        title: const Text('here', style: TextStyle(fontWeight: FontWeight.bold)),
+        title:
+            const Text('here', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -138,7 +141,9 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: const Color(0xFF1E1F23),
         child: Column(
           children: [
-            const DrawerHeader(child: Center(child: Text("History", style: TextStyle(fontSize: 24)))),
+            const DrawerHeader(
+                child: Center(
+                    child: Text("History", style: TextStyle(fontSize: 24)))),
             ListTile(
               leading: const Icon(Icons.add),
               title: const Text("New Chat"),
@@ -162,12 +167,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 final msg = messages[index];
                 final isUser = msg.role == 'user';
                 return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment:
+                      isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: isUser ? const Color(0xFF2D2E33) : Colors.transparent,
+                      color:
+                          isUser ? const Color(0xFF2D2E33) : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: MarkdownBody(
@@ -181,7 +188,8 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          if (isLoading) const LinearProgressIndicator(backgroundColor: Colors.transparent),
+          if (isLoading)
+            const LinearProgressIndicator(backgroundColor: Colors.transparent),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             child: Row(
@@ -197,7 +205,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 20),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
