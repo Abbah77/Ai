@@ -7,12 +7,10 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() => runApp(const ReCoreProApp());
+void main() => runApp(const MyApp());
 
-/* ===================== APP ===================== */
-
-class ReCoreProApp extends StatelessWidget {
-  const ReCoreProApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
