@@ -1,5 +1,5 @@
 name: ai_project
-description: A new Flutter project.
+description: AI Chat Assistant with WebView Integration
 version: 1.0.0+1
 
 environment:
@@ -9,10 +9,20 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.1.0
+  google_fonts: ^6.1.0
+  shared_preferences: ^2.2.2
+  animations: ^2.0.9
+  flutter_inappwebview: ^6.1.5
+  iconsax_flutter: ^1.0.0
+  haptic_feedback: ^3.1.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/
+  generate: true
