@@ -1,26 +1,25 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class ChatMessage {
   final String role; // 'user' or 'assistant'
   final String content;
-
   ChatMessage({required this.role, required this.content});
 
   Map<String, String> toMap() => {'role': role, 'content': content};
-
   factory ChatMessage.fromMap(Map<String, dynamic> map) =>
       ChatMessage(role: map['role'], content: map['content']);
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -32,7 +31,7 @@ class _MyAppState extends State<MyApp> {
   List<ChatMessage> messages = [];
   bool sidebarOpen = true;
 
-  late InAppWebViewController _webViewController;
+  late WebViewController _webViewController;
 
   @override
   void initState() {
@@ -45,7 +44,8 @@ class _MyAppState extends State<MyApp> {
     List<String>? stored = prefs.getStringList(storageKey);
     if (stored != null) {
       setState(() {
-        messages = stored.map((s) => ChatMessage.fromMap(jsonDecode(s))).toList();
+        messages =
+            stored.map((s) => ChatMessage.fromMap(jsonDecode(s))).toList();
       });
       _scrollToBottom();
     }
@@ -62,7 +62,7 @@ class _MyAppState extends State<MyApp> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent + 100,
-          duration: Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
       }
@@ -81,9 +81,8 @@ class _MyAppState extends State<MyApp> {
     _saveChatHistory();
 
     // Send message to iframe via JS
-    _webViewController.evaluateJavascript(
-      source:
-          "window.postMessage(${jsonEncode({'role': 'user', 'content': text})}, '*');",
+    _webViewController.runJavaScript(
+      "window.postMessage(${jsonEncode({'role': 'user', 'content': text})}, '*');",
     );
 
     // Add placeholder assistant message
@@ -116,60 +115,62 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'AI Chat',
       debugShowCheckedModeBanner: false,
-      title: 'AI',
       theme: ThemeData.dark(),
       home: Scaffold(
         body: Row(
           children: [
             // Sidebar
             AnimatedContainer(
-              duration: Duration(milliseconds: 200),
+              duration: const Duration(milliseconds: 200),
               width: sidebarOpen ? 250 : 0,
-              color: Color(0xFF24242A),
+              color: const Color(0xFF24242A),
               child: Column(
                 children: [
-                  SizedBox(height: 60),
+                  const SizedBox(height: 60),
                   Expanded(
                     child: ListView(
-                      padding: EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(8),
                       children: [
                         ElevatedButton.icon(
                           onPressed: _newChat,
-                          icon: Icon(Icons.add),
-                          label: Text('New Chat'),
+                          icon: const Icon(Icons.add),
+                          label: const Text('New Chat'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFFA78BFA),
+                            backgroundColor: const Color(0xFFA78BFA),
                           ),
                         ),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                         ...messages
                             .asMap()
                             .entries
                             .where((e) => e.value.role == 'user')
-                            .map((e) => ListTile(
-                                  title: Text(
-                                    e.value.content,
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.white70),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  onTap: () {},
-                                ))
+                            .map(
+                              (e) => ListTile(
+                                title: Text(
+                                  e.value.content,
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.white70),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                onTap: () {},
+                              ),
+                            )
                             .toList(),
                       ],
                     ),
                   ),
-                  Divider(color: Colors.grey),
+                  const Divider(color: Colors.grey),
                   ListTile(
-                    leading: Icon(Icons.settings),
-                    title: Text('Settings'),
+                    leading: const Icon(Icons.settings),
+                    title: const Text('Settings'),
                     onTap: () {
-                      // Settings
+                      // Settings action
                     },
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
@@ -181,9 +182,9 @@ class _MyAppState extends State<MyApp> {
                   // Header
                   Container(
                     height: 60,
-                    color: Color(0xFF24242A),
+                    color: const Color(0xFF24242A),
                     alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
                         IconButton(
@@ -195,8 +196,8 @@ class _MyAppState extends State<MyApp> {
                             });
                           },
                         ),
-                        SizedBox(width: 8),
-                        Text('AI',
+                        const SizedBox(width: 8),
+                        const Text('AI',
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold)),
                       ],
@@ -206,16 +207,16 @@ class _MyAppState extends State<MyApp> {
                   // Messages
                   Expanded(
                     child: Container(
-                      color: Color(0xFF16161A),
+                      color: const Color(0xFF16161A),
                       child: ListView.builder(
                         controller: _scrollController,
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         itemCount: messages.isEmpty ? 1 : messages.length,
                         itemBuilder: (context, index) {
                           if (messages.isEmpty) {
                             return Center(
                               child: Padding(
-                                padding: EdgeInsets.only(top: 50),
+                                padding: const EdgeInsets.only(top: 50),
                                 child: Text(
                                   'How can I help you?',
                                   style: TextStyle(
@@ -231,18 +232,18 @@ class _MyAppState extends State<MyApp> {
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
                             child: Container(
-                              margin: EdgeInsets.symmetric(vertical: 6),
-                              padding: EdgeInsets.all(14),
-                              constraints: BoxConstraints(maxWidth: 600),
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              padding: const EdgeInsets.all(14),
+                              constraints: const BoxConstraints(maxWidth: 600),
                               decoration: BoxDecoration(
                                 color: isUser
-                                    ? Color(0xFF2D2D33)
-                                    : Color(0xFF24242A),
+                                    ? const Color(0xFF2D2D33)
+                                    : const Color(0xFF24242A),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 msg.content,
-                                style: TextStyle(color: Colors.white),
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
                           );
@@ -254,29 +255,28 @@ class _MyAppState extends State<MyApp> {
                   // Input + iframe
                   Column(
                     children: [
-                      Container(
+                      SizedBox(
                         height: 300,
-                        child: InAppWebView(
-                          initialUrlRequest: URLRequest(
-                              url: Uri.parse(
-                                  'https://decodernet.mywire.org/ReCore')),
-                          initialOptions: InAppWebViewGroupOptions(
-                            crossPlatform: InAppWebViewOptions(
-                              javaScriptEnabled: true,
-                            ),
-                          ),
+                        child: WebView(
+                          initialUrl:
+                              'https://decodernet.mywire.org/ReCore',
+                          javascriptMode: JavascriptMode.unrestricted,
                           onWebViewCreated: (controller) {
                             _webViewController = controller;
                           },
-                          onConsoleMessage: (controller, consoleMessage) {
-                            // Receive assistant message
-                            _receiveAssistantMessage(consoleMessage.message);
+                          javascriptChannels: {
+                            JavascriptChannel(
+                              name: 'Flutter',
+                              onMessageReceived: (msg) {
+                                _receiveAssistantMessage(msg.message);
+                              },
+                            ),
                           },
                         ),
                       ),
                       Container(
-                        color: Color(0xFF16161A),
-                        padding: EdgeInsets.all(12),
+                        color: const Color(0xFF16161A),
+                        padding: const EdgeInsets.all(12),
                         child: Row(
                           children: [
                             Expanded(
@@ -284,27 +284,28 @@ class _MyAppState extends State<MyApp> {
                                 controller: _controller,
                                 minLines: 1,
                                 maxLines: 5,
-                                style: TextStyle(color: Colors.white),
+                                style:
+                                    const TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
                                   hintText: 'Enter your message...',
-                                  hintStyle:
-                                      TextStyle(color: Colors.white54),
+                                  hintStyle: const TextStyle(
+                                      color: Colors.white54),
                                   filled: true,
-                                  fillColor: Color(0xFF1F1F25),
+                                  fillColor: const Color(0xFF1F1F25),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(50),
                                     borderSide: BorderSide.none,
                                   ),
-                                  contentPadding: EdgeInsets.symmetric(
+                                  contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 10),
                                 ),
                                 onSubmitted: (_) => _sendMessage(),
                               ),
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             IconButton(
-                              icon: Icon(Icons.send),
-                              color: Color(0xFFA78BFA),
+                              icon: const Icon(Icons.send),
+                              color: const Color(0xFFA78BFA),
                               onPressed: _sendMessage,
                             ),
                           ],
