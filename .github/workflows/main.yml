@@ -1,0 +1,45 @@
+name: Project Deep Trace and Repair
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows you to run this manually
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # STEP 1: Repair the Android Folder
+      - name: Repair Android Folder
+        run: |
+          rm -rf android/app/src/main/res/drawable-* # Cleans old icons if corrupted
+          flutter create . --platforms android
+
+      # STEP 2: Trace and Repair Dart Code
+      - name: Trace and Auto-Fix Bugs
+        run: |
+          # Applies all available automated fixes
+          dart fix --apply 
+          # Formats code to prevent syntax-related build failures
+          dart format .
+
+      # STEP 3: Final Inspection
+      - name: Final Bug Trace
+        run: flutter analyze
+
+      # STEP 4: Push the fixes back to your Repository
+      - name: Commit and Push Repairs
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Bot: Automated repair of Android folder and Dart code"
