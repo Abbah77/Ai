@@ -1,4 +1,4 @@
-name: ai_project
+name: HERE
 description: AI Chat Assistant with WebView Integration
 version: 1.0.0+1
 
@@ -20,9 +20,16 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.12.0
 
 flutter:
   uses-material-design: true
   assets:
     - assets/
-  generate: true
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/my_icon.png"
+  adaptive_icon_background: "assets/icons/background.png"  # Optional for Android 12+
+  adaptive_icon_foreground: "assets/icons/my_icon.png"
