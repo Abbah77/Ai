@@ -8,12 +8,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.1.0
+  # Fonts
   google_fonts: ^6.1.0
+  # Local storage for chat history
   shared_preferences: ^2.2.2
+  # Animations for smooth UI effects
   animations: ^2.0.9
-  flutter_inappwebview: ^6.1.5
+  # WebView to load your iframe AI
+  webview_flutter: ^4.1.1
+  # Icons
   iconsax_flutter: ^1.0.0
+  # Haptic feedback for button press
   haptic_feedback: ^0.6.4+3
 
 dev_dependencies:
@@ -24,6 +29,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/   # Keep this if you have other assets like images for UI
-
-# Remove flutter_icons section because you already have all launcher icons manually
+    - assets/
