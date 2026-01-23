@@ -20,6 +20,8 @@ dependencies:
   iconsax_flutter: ^1.0.0
   # Haptic feedback for button press
   haptic_feedback: ^0.6.4+3
+  # Markdown support for AI responses
+  flutter_markdown: ^0.7.5
 
 dev_dependencies:
   flutter_test:
