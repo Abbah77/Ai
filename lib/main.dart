@@ -92,7 +92,7 @@ class ChatStorage {
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
-  
+
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
@@ -176,9 +176,7 @@ class _ChatScreenState extends State<ChatScreen> {
           padding: const EdgeInsets.all(14),
           constraints: const BoxConstraints(maxWidth: 320),
           decoration: BoxDecoration(
-            color: isUser
-                ? const Color(0xFFA78BFA)
-                : const Color(0xFF1E1F23),
+            color: isUser ? const Color(0xFFA78BFA) : const Color(0xFF1E1F23),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Text(
@@ -206,13 +204,12 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text("Chat History",
-                  style: TextStyle(color: Colors.grey)),
+              child: Text("Chat History", style: TextStyle(color: Colors.grey)),
             ),
             ...sessions.map(
               (s) => ListTile(
-                title: Text(s.title,
-                    style: const TextStyle(color: Colors.white)),
+                title:
+                    Text(s.title, style: const TextStyle(color: Colors.white)),
                 onTap: () {
                   setState(() {
                     sessionId = s.id;
@@ -235,8 +232,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (loading)
                   const Padding(
                     padding: EdgeInsets.all(12),
-                    child: Text("Typing...",
-                        style: TextStyle(color: Colors.grey)),
+                    child:
+                        Text("Typing...", style: TextStyle(color: Colors.grey)),
                   )
               ],
             ),
@@ -256,8 +253,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       decoration: const InputDecoration(
                         hintText: "Message…",
                         border: InputBorder.none,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 20),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 20),
                       ),
                       onSubmitted: (_) => send(),
                     ),
