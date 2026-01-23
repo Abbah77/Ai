@@ -8,20 +8,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # Fonts
-  google_fonts: ^6.1.0
-  # Local storage for chat history
+  
+  # Crucial for the Bridge logic
+  webview_flutter: ^4.10.0  # Updated for better JS support
+  
+  # UI and Data
   shared_preferences: ^2.2.2
-  # Animations for smooth UI effects
-  animations: ^2.0.9
-  # WebView to load your hidden iframe AI
-  webview_flutter: ^4.1.1
-  # Icons
-  iconsax_flutter: ^1.0.0
-  # Haptic feedback for button press
-  haptic_feedback: ^0.6.4+3
-  # Markdown rendering for AI responses
   flutter_markdown: ^0.6.11
+  
+  # Aesthetics
+  google_fonts: ^6.1.0
+  animations: ^2.0.9
+  iconsax_flutter: ^1.0.0
+  haptic_feedback: ^0.6.4+3
 
 dev_dependencies:
   flutter_test:
@@ -30,5 +29,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/
+  # Only include assets if the folder actually exists!
+  # assets:
+  #   - assets/
