@@ -1,5 +1,5 @@
 name: here
-description: A premium native AI assistant powered by the ReCore API.
+description: AI Chat Assistant - Project Deep Trace and Repair
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,24 +10,20 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # --- CORE LOGIC ---
-  # Used for direct API communication with your Render server
+  # --- LOGIC ---
+  # Connects directly to: https://decodernet-servers.onrender.com/ReCore/chat
   http: ^1.1.0
-  
-  # Used for saving chat history locally on your S9+
+  # Saves history on your S9+
   shared_preferences: ^2.2.2
 
-  # --- UI & DESIGN ---
-  # The primary font for the Gemini/Modern look
+  # --- UI ---
+  # Premium Typography
   google_fonts: ^6.1.0
-  
-  # Renders the AI's technical/formatted responses beautifully
+  # Renders AI responses (Bold, Lists, Code)
   flutter_markdown: ^0.6.11
-  
-  # Professional icons for the menu and send buttons
+  # Modern Icons
   iconsax_flutter: ^1.0.0
-  
-  # Smooth transitions and animations for the UI
+  # Smooth UI transitions
   animations: ^2.0.9
 
 dev_dependencies:
@@ -37,8 +33,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  # Ensure you have no active 'assets' lines if the folder is empty.
-  # If you add a logo later, uncomment the lines below:
+  # Note: Ensure an 'assets/' folder exists in your project 
+  # before uncommenting the lines below.
   # assets:
-  #   - assets/images/
+  #   - assets/
