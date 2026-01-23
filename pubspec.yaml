@@ -20,16 +20,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.12.0
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/
+    - assets/   # Keep this if you have other assets like images for UI
 
-flutter_icons:
-  android: true
-  ios: true
-  image_path: "assets/icons/my_icon.png"
-  adaptive_icon_background: "assets/icons/background.png"  # Optional for Android 12+
-  adaptive_icon_foreground: "assets/icons/my_icon.png"
+# Remove flutter_icons section because you already have all launcher icons manually
