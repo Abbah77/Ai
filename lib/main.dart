@@ -11,7 +11,7 @@ void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
+  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -24,6 +24,8 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+/* ===================== MODELS ===================== */
 
 class ChatMessage {
   final String role;
@@ -63,6 +65,8 @@ class ChatSession {
       );
 }
 
+/* ===================== STORAGE ===================== */
+
 class ChatStorage {
   static const key = 'chat_sessions';
 
@@ -83,6 +87,8 @@ class ChatStorage {
     );
   }
 }
+
+/* ===================== CHAT SCREEN ===================== */
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -113,9 +119,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _scrollListener() {
     if (!_scrollController.hasClients) return;
-    _userIsScrolling = (_scrollController.position.maxScrollExtent -
-            _scrollController.position.pixels) >
-        120;
+    _userIsScrolling =
+        (_scrollController.position.maxScrollExtent - _scrollController.position.pixels) > 120;
   }
 
   void _scrollToBottom() {
@@ -124,7 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
+          duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
         );
       }
@@ -170,7 +175,6 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty) return;
 
     HapticFeedback.lightImpact();
-
     setState(() {
       _messages.add(ChatMessage(role: 'user', content: text));
       _controller.clear();
@@ -178,40 +182,37 @@ class _ChatScreenState extends State<ChatScreen> {
       _showTypingIndicator = true;
       _userIsScrolling = false;
     });
-
     _scrollToBottom();
+
     _client = http.Client();
 
     try {
-      final request = http.Request(
-        'POST',
+      final res = await _client!.post(
         Uri.parse("https://decodernet-servers.onrender.com/ReCore/chat"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(_messages.map((e) => e.toJson()).toList()),
       );
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode(_messages.map((e) => e.toJson()).toList());
 
-      final response = await _client!.send(request);
-      bool firstChunk = true;
+      final aiText = jsonDecode(res.body)['response'] ?? "";
 
-      await for (var chunk in response.stream.transform(utf8.decoder)) {
+      // Remove typing indicator, add empty assistant bubble
+      setState(() {
+        _showTypingIndicator = false;
+        _messages.add(ChatMessage(role: 'assistant', content: ""));
+      });
+
+      // Fast typewriter effect
+      for (int i = 0; i < aiText.length; i++) {
         if (!_isLoading) break;
-
-        if (firstChunk) {
-          setState(() {
-            _showTypingIndicator = false;
-            _messages.add(ChatMessage(role: 'assistant', content: ""));
-          });
-          firstChunk = false;
-        }
-
-        _messages.last.content += chunk;
+        _messages.last.content += aiText[i];
         setState(() {});
         _scrollToBottom();
+        await Future.delayed(const Duration(milliseconds: 5));
       }
     } catch (_) {
       if (_isLoading) {
-        _messages.add(
-            ChatMessage(role: 'assistant', content: "⚠️ Connection error."));
+        _messages.add(ChatMessage(
+            role: 'assistant', content: "⚠️ Connection error."));
       }
     } finally {
       _isLoading = false;
@@ -222,28 +223,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Widget _typingDots() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (_) {
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                color: Colors.grey,
-                shape: BoxShape.circle,
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
+  Widget _typingDots() => const TypingIndicator();
 
   Widget _bubble(ChatMessage m) {
     final isUser = m.role == 'user';
@@ -275,8 +255,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredSessions = _sessions.where((s) {
-      return s.messages
-          .any((m) => m.content.toLowerCase().contains(_search.toLowerCase()));
+      return s.messages.any(
+          (m) => m.content.toLowerCase().contains(_search.toLowerCase()));
     }).toList();
 
     return Scaffold(
@@ -331,7 +311,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             Navigator.pop(context);
                           },
                           onLongPress: () async {
-                            final prefs = await SharedPreferences.getInstance();
+                            final prefs =
+                                await SharedPreferences.getInstance();
                             _sessions.removeWhere((x) => x.id == s.id);
                             await prefs.setStringList(
                               ChatStorage.key,
@@ -344,6 +325,13 @@ class _ChatScreenState extends State<ChatScreen> {
                         ))
                     .toList(),
               ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.settings, color: Colors.grey),
+              title:
+                  const Text("Settings", style: TextStyle(color: Colors.grey)),
+              onTap: () {},
             ),
           ],
         ),
@@ -367,18 +355,30 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: "Ask anything…",
-                      filled: true,
-                      fillColor: const Color(0xFF1E1F23),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: 40,
+                      maxHeight: 150, // roughly 4-6 lines
+                    ),
+                    child: Scrollbar(
+                      child: TextField(
+                        controller: _controller,
+                        maxLines: null, // allows expanding
+                        keyboardType: TextInputType.multiline,
+                        decoration: InputDecoration(
+                          hintText: "Ask anything…",
+                          filled: true,
+                          fillColor: const Color(0xFF1E1F23),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16), // more padding for multi-line
+                        ),
+                        onSubmitted: (_) => _send(),
                       ),
                     ),
-                    onSubmitted: (_) => _send(),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -397,6 +397,92 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 }
+
+/* ===================== ANIMATED TYPING INDICATOR ===================== */
+
+class TypingIndicator extends StatefulWidget {
+  const TypingIndicator({super.key});
+
+  @override
+  State<TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _dot1;
+  late Animation<double> _dot2;
+  late Animation<double> _dot3;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+
+    _dot1 = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0.0, 0.6, curve: Curves.easeInOut)),
+    );
+    _dot2 = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0.2, 0.8, curve: Curves.easeInOut)),
+    );
+    _dot3 = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0.4, 1.0, curve: Curves.easeInOut)),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _dot(Animation<double> animation) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: FadeTransition(
+        opacity: animation,
+        child: Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: Colors.grey,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _dot(_dot1),
+            _dot(_dot2),
+            _dot(_dot3),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ===================== CODE COPY BUILDER ===================== */
 
 class CodeCopyBuilder extends MarkdownElementBuilder {
   @override
