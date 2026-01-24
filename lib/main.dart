@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(const MyApp());
@@ -25,11 +25,10 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/* ===================== MODELS ===================== */
-
 class ChatMessage {
   final String role;
   String content;
+
   ChatMessage({required this.role, required this.content});
 
   Map<String, dynamic> toJson() => {'role': role, 'content': content};
@@ -64,8 +63,6 @@ class ChatSession {
       );
 }
 
-/* ===================== STORAGE ===================== */
-
 class ChatStorage {
   static const key = 'chat_sessions';
 
@@ -87,25 +84,24 @@ class ChatStorage {
   }
 }
 
-/* ===================== UI ===================== */
-
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
+
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final _controller = TextEditingController();
+  final _scrollController = ScrollController();
 
   List<ChatMessage> _messages = [];
   List<ChatSession> _sessions = [];
-
   String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
   bool _isLoading = false;
   bool _userIsScrolling = false;
-
+  bool _showTypingIndicator = false;
+  String _search = "";
   http.Client? _client;
 
   @override
@@ -116,10 +112,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollListener() {
-    if (_scrollController.hasClients) {
-      _userIsScrolling = _scrollController.position.pixels <
-          _scrollController.position.maxScrollExtent - 80;
-    }
+    if (!_scrollController.hasClients) return;
+    _userIsScrolling = (_scrollController.position.maxScrollExtent - 
+                        _scrollController.position.pixels) > 120;
   }
 
   void _scrollToBottom() {
@@ -128,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
       }
@@ -142,15 +137,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _saveSession() async {
     if (_messages.isEmpty) return;
-    await ChatStorage.save(
-      ChatSession(
-        id: _sessionId,
-        title: _messages.first.content.length > 30
-            ? _messages.first.content.substring(0, 30)
-            : _messages.first.content,
-        messages: _messages,
-      ),
-    );
+    await ChatStorage.save(ChatSession(
+      id: _sessionId,
+      title: _messages.first.content.length > 30
+          ? _messages.first.content.substring(0, 30)
+          : _messages.first.content,
+      messages: _messages,
+    ));
     _loadSessions();
   }
 
@@ -165,20 +158,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _stopGenerating() {
     _client?.close();
-    setState(() => _isLoading = false);
-  }
-
-  Future<void> _typeOutResponse(String text) async {
-    final msg = ChatMessage(role: 'assistant', content: "");
-    setState(() => _messages.add(msg));
-
-    for (int i = 0; i < text.length; i++) {
-      if (!_isLoading) break;
-      await Future.delayed(const Duration(milliseconds: 10));
-      msg.content += text[i];
-      setState(() {});
-      _scrollToBottom();
-    }
+    setState(() {
+      _isLoading = false;
+      _showTypingIndicator = false;
+    });
   }
 
   Future<void> _send() async {
@@ -186,10 +169,12 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty) return;
 
     HapticFeedback.lightImpact();
+
     setState(() {
       _messages.add(ChatMessage(role: 'user', content: text));
       _controller.clear();
       _isLoading = true;
+      _showTypingIndicator = true;
       _userIsScrolling = false;
     });
 
@@ -197,29 +182,67 @@ class _ChatScreenState extends State<ChatScreen> {
     _client = http.Client();
 
     try {
-      final res = await _client!.post(
+      final request = http.Request(
+        'POST',
         Uri.parse("https://decodernet-servers.onrender.com/ReCore/chat"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(_messages.map((e) => e.toJson()).toList()),
       );
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode(_messages.map((e) => e.toJson()).toList());
 
-      if (res.statusCode == 200) {
-        await _typeOutResponse(jsonDecode(res.body)['response']);
+      final response = await _client!.send(request);
+      bool firstChunk = true;
+
+      await for (var chunk in response.stream.transform(utf8.decoder)) {
+        if (!_isLoading) break;
+
+        if (firstChunk) {
+          setState(() {
+            _showTypingIndicator = false;
+            _messages.add(ChatMessage(role: 'assistant', content: ""));
+          });
+          firstChunk = false;
+        }
+
+        _messages.last.content += chunk;
+        setState(() {});
+        _scrollToBottom();
       }
     } catch (_) {
       if (_isLoading) {
-        _messages.add(
-            ChatMessage(role: 'assistant', content: "⚠️ Connection error."));
+        _messages.add(ChatMessage(
+            role: 'assistant', content: "⚠️ Connection error."));
       }
     } finally {
       _isLoading = false;
+      _showTypingIndicator = false;
       _client?.close();
       setState(() {});
       _saveSession();
     }
   }
 
-  /* ===================== WIDGETS ===================== */
+  Widget _typingDots() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (_) {
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: Colors.grey,
+                shape: BoxShape.circle,
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
 
   Widget _bubble(ChatMessage m) {
     final isUser = m.role == 'user';
@@ -235,8 +258,9 @@ class _ChatScreenState extends State<ChatScreen> {
         child: MarkdownBody(
           data: m.content,
           selectable: true,
+          builders: {'code': CodeCopyBuilder()},
           styleSheet: MarkdownStyleSheet(
-            code: GoogleFonts.firaCode(backgroundColor: Colors.black54),
+            code: GoogleFonts.firaCode(),
             codeblockDecoration: BoxDecoration(
               color: Colors.black,
               borderRadius: BorderRadius.circular(8),
@@ -247,36 +271,16 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _starterCards() {
-    final prompts = [
-      "Explain quantum computing",
-      "Write a Flutter app",
-      "Create a workout plan"
-    ];
-    return Center(
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: prompts
-            .map((p) => ActionChip(
-                  label: Text(p),
-                  onPressed: () {
-                    _controller.text = p;
-                    _send();
-                  },
-                ))
-            .toList(),
-      ),
-    );
-  }
-
-  /* ===================== BUILD ===================== */
-
   @override
   Widget build(BuildContext context) {
+    final filteredSessions = _sessions.where((s) {
+      return s.messages.any((m) =>
+          m.content.toLowerCase().contains(_search.toLowerCase()));
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("ReCore AI",
+        title: Text("HERE AI",
             style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
@@ -293,21 +297,32 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton.icon(
-                  onPressed: _newChat,
-                  icon: const Icon(Icons.add),
-                  label: const Text("New Chat"),
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _newChat,
+                      icon: const Icon(Icons.add),
+                      label: const Text("New Chat"),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration:
+                          const InputDecoration(hintText: "Search chats"),
+                      onChanged: (v) => setState(() => _search = v),
+                    ),
+                  ],
                 ),
               ),
             ),
             const Divider(),
             Expanded(
               child: ListView(
-                children: _sessions
+                children: filteredSessions
                     .map((s) => ListTile(
                           title: Text(s.title,
-                              style: const TextStyle(color: Colors.white)),
+                              style:
+                                  const TextStyle(color: Colors.white)),
                           onTap: () {
                             setState(() {
                               _sessionId = s.id;
@@ -315,16 +330,23 @@ class _ChatScreenState extends State<ChatScreen> {
                             });
                             Navigator.pop(context);
                           },
+                          onLongPress: () async {
+                            final prefs =
+                                await SharedPreferences.getInstance();
+                            _sessions.removeWhere(
+                                (x) => x.id == s.id);
+                            await prefs.setStringList(
+                              ChatStorage.key,
+                              _sessions
+                                  .map((e) =>
+                                      jsonEncode(e.toJson()))
+                                  .toList(),
+                            );
+                            setState(() {});
+                          },
                         ))
                     .toList(),
               ),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.settings, color: Colors.grey),
-              title:
-                  const Text("Settings", style: TextStyle(color: Colors.grey)),
-              onTap: () {},
             ),
           ],
         ),
@@ -332,13 +354,18 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: _messages.isEmpty
-                ? _starterCards()
-                : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: _messages.length,
-                    itemBuilder: (_, i) => _bubble(_messages[i]),
-                  ),
+            child: ListView.builder(
+              controller: _scrollController,
+              itemCount:
+                  _messages.length + (_showTypingIndicator ? 1 : 0),
+              itemBuilder: (_, i) {
+                if (_showTypingIndicator &&
+                    i == _messages.length) {
+                  return _typingDots();
+                }
+                return _bubble(_messages[i]);
+              },
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -372,6 +399,37 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class CodeCopyBuilder extends MarkdownElementBuilder {
+  @override
+  Widget visitElementAfter(element, preferredStyle) {
+    final code = element.textContent;
+    return Stack(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: SelectableText(code,
+              style: GoogleFonts.firaCode(color: Colors.white)),
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: IconButton(
+            icon: const Icon(Icons.copy, size: 18, color: Colors.white),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: code));
+            },
+          ),
+        )
+      ],
     );
   }
 }
