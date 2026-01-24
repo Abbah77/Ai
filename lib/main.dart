@@ -11,7 +11,7 @@ void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -119,8 +119,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _scrollListener() {
     if (!_scrollController.hasClients) return;
-    _userIsScrolling =
-        (_scrollController.position.maxScrollExtent - _scrollController.position.pixels) > 120;
+    _userIsScrolling = (_scrollController.position.maxScrollExtent -
+            _scrollController.position.pixels) >
+        120;
   }
 
   void _scrollToBottom() {
@@ -211,8 +212,8 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (_) {
       if (_isLoading) {
-        _messages.add(ChatMessage(
-            role: 'assistant', content: "⚠️ Connection error."));
+        _messages.add(
+            ChatMessage(role: 'assistant', content: "⚠️ Connection error."));
       }
     } finally {
       _isLoading = false;
@@ -255,8 +256,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredSessions = _sessions.where((s) {
-      return s.messages.any(
-          (m) => m.content.toLowerCase().contains(_search.toLowerCase()));
+      return s.messages
+          .any((m) => m.content.toLowerCase().contains(_search.toLowerCase()));
     }).toList();
 
     return Scaffold(
@@ -311,8 +312,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             Navigator.pop(context);
                           },
                           onLongPress: () async {
-                            final prefs =
-                                await SharedPreferences.getInstance();
+                            final prefs = await SharedPreferences.getInstance();
                             _sessions.removeWhere((x) => x.id == s.id);
                             await prefs.setStringList(
                               ChatStorage.key,
@@ -374,7 +374,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             borderSide: BorderSide.none,
                           ),
                           contentPadding: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 16), // more padding for multi-line
+                              vertical: 12,
+                              horizontal: 16), // more padding for multi-line
                         ),
                         onSubmitted: (_) => _send(),
                       ),
