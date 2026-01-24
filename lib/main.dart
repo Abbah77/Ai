@@ -113,8 +113,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _scrollListener() {
     if (!_scrollController.hasClients) return;
-    _userIsScrolling = (_scrollController.position.maxScrollExtent - 
-                        _scrollController.position.pixels) > 120;
+    _userIsScrolling = (_scrollController.position.maxScrollExtent -
+            _scrollController.position.pixels) >
+        120;
   }
 
   void _scrollToBottom() {
@@ -209,8 +210,8 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (_) {
       if (_isLoading) {
-        _messages.add(ChatMessage(
-            role: 'assistant', content: "⚠️ Connection error."));
+        _messages.add(
+            ChatMessage(role: 'assistant', content: "⚠️ Connection error."));
       }
     } finally {
       _isLoading = false;
@@ -274,8 +275,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredSessions = _sessions.where((s) {
-      return s.messages.any((m) =>
-          m.content.toLowerCase().contains(_search.toLowerCase()));
+      return s.messages
+          .any((m) => m.content.toLowerCase().contains(_search.toLowerCase()));
     }).toList();
 
     return Scaffold(
@@ -321,8 +322,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: filteredSessions
                     .map((s) => ListTile(
                           title: Text(s.title,
-                              style:
-                                  const TextStyle(color: Colors.white)),
+                              style: const TextStyle(color: Colors.white)),
                           onTap: () {
                             setState(() {
                               _sessionId = s.id;
@@ -331,15 +331,12 @@ class _ChatScreenState extends State<ChatScreen> {
                             Navigator.pop(context);
                           },
                           onLongPress: () async {
-                            final prefs =
-                                await SharedPreferences.getInstance();
-                            _sessions.removeWhere(
-                                (x) => x.id == s.id);
+                            final prefs = await SharedPreferences.getInstance();
+                            _sessions.removeWhere((x) => x.id == s.id);
                             await prefs.setStringList(
                               ChatStorage.key,
                               _sessions
-                                  .map((e) =>
-                                      jsonEncode(e.toJson()))
+                                  .map((e) => jsonEncode(e.toJson()))
                                   .toList(),
                             );
                             setState(() {});
@@ -356,11 +353,9 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              itemCount:
-                  _messages.length + (_showTypingIndicator ? 1 : 0),
+              itemCount: _messages.length + (_showTypingIndicator ? 1 : 0),
               itemBuilder: (_, i) {
-                if (_showTypingIndicator &&
-                    i == _messages.length) {
+                if (_showTypingIndicator && i == _messages.length) {
                   return _typingDots();
                 }
                 return _bubble(_messages[i]);
